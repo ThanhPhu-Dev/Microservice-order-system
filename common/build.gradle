@@ -1,0 +1,12 @@
+plugins {
+    id 'java-library'
+}
+dependencies {
+    api 'org.springframework:spring-context'
+    api 'org.springframework:spring-beans'
+    api 'com.fasterxml.jackson.core:jackson-databind'
+}
+
+//test {
+//    useJUnitPlatform()
+//}
