@@ -29,6 +29,7 @@ subprojects {
             // Spring Boot BOM
             mavenBom "org.springframework.boot:spring-boot-dependencies:3.2.1"
             mavenBom "org.junit:junit-bom:5.10.0"
+            mavenBom "com.mysql:mysql-connector-j:9.4.0"
         }
     }
 
