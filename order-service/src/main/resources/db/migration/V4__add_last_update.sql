@@ -1,0 +1,2 @@
+ALTER TABLE orders
+    ADD COLUMN update_date TIMESTAMP NOT NULL;

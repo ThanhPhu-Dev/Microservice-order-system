@@ -33,7 +33,87 @@ The system create an order and payment it with microservice system
 **Value: Transaction boundary in microservice**
 
 #### Answer and Note:
-1. 
+1. Properties in an entity should be Objects, not primitive types.
+2. In springboot: 1 request is handled by one thread by default, therefore there is no need to return completefuture for every API, Asynchronous processing should be used for business logic.
+3. layers should communicate via interfaces
+4. `ResponseEntity.accepted()` returns 202, this status code is used to indicate that the request has been accepted and is being processed, but has not been completed yet.
+5. Import `org.springframework.boot:spring-boot-starter-validation` to use validation.  
+   5.1. Validation rules can be defined on fields using annotations such as `@NotEmpty` `@Min`, etc. You can also define a custom error message for each annotation.  
+   5.2. In the controller layer, use `@valid` on the request parameter that needs validation, if request is invalid Spring will automatically return a validation error message and the controller method will not be executed.  
+   5.3. `@Validated` is placed on a class (such as `@Service` or `@Component`), it enables validation for individual method parameters. For example: `public void updateAge(@Min(18) int age)`.  
+   5.4. annotations have a `groups` property to categorize validation rules. For example, an id might be required for an update API but not for creation API.
+```
+//create a new interface
+public interface UpdateGroup{}
+public interface CreateGroup{}
+
+// in DTO
+public class UserDTO {
+    @NotNull(groups = UpdateGroup.class)
+    private Long id;
+   ...
+}
+// In controller
+ @PostMapping("/users")
+    public void create(@Validated(CreateGroup.class) @RequestBody UserDTO user) {
+        ...
+    }
+
+    @PutMapping("/users")
+    public void update(@Validated({Default.class, UpdateGroup.class}) @RequestBody UserDTO user) {
+        ...
+    }
+```
+   * Annotations without an explicit groups property belong to the `jakarta.validation.groups.Default` group. If you only declare `CreateGroup.class`, other groups (such as `Default.class` and `UpdateGroup.class`) will be ignored.  
+   5.5. If you want the API method to be called regardless of validation success or failure, you must include a  `BindingResult bindingResult` parameter in the controller method.  
+6. You can also handle exceptions using `@RestControllerAdvice`.  
+   6.1. Create a class with `@RestControllerAdvice`.  
+   6.2. for e.g : you can catch `BindException` to return a custom response.  
+   ``` @ExceptionHandler(BindException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleBindException(BindException e) {
+        String errorMessage = "Request is invalid";
+        log.error("Request is invalid");
+        if (e.getBindingResult().hasErrors())
+            e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+        return errorMessage;
+    }`
+   ```
+   6.3 You can also define and handle custom exception (e.g: `AppRunTimeException.class`) to catch and process.
+7. `ApplicationEventPublisher` is a Spring-provided object, used to publish events. To listen for an event, use an event listener annotation.  
+```
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+       public void onOrderEvent(OrderCreatedEvent orderCreatedEvent) 
+```
+8. To use Lombok, you must add the following dependencies
+```
+      compileOnly "org.projectlombok:lombok:1.18.42"
+      annotationProcessor "org.projectlombok:lombok:1.18.42"
+```
+9. To Use JPA, import `org.springframework.boot:spring-boot-starter-data-jpa`.  
+   9.1. Use `@transactiona;` on methods to enable transactional behavior.  
+   9.2. Spring provides 7 transaction propagation modes:  
+   &emsp; 9.2.1. `REQUIRE`(default), if there is an active transaction, the method joins it. If not, the new transaction is created.  
+   &emsp; 9.2.2. `SUPPORTS` : Use an existing transaction if present; otherwise, executes without a transaction context.  
+   &emsp; 9.2.3. `MANDATORY`: require an existing transaction, otherwise an exception is thrown.  
+   &emsp; 9.2.4. `NEVER`: Throws an exception if a transaction already exists.  
+   &emsp; 9.2.5. `NOT_SUPPORTED`: Suspends the current transaction and executes the method without a transaction context.  
+   &emsp; 9.2.6. `REQUIRES_NEW`: Suspends the current transaction, creates a new one, commits it, and then resumes the previous transaction.  
+   &emsp; 9.2.7. `NESTED` Creates a new transaction if none exists. If a transaction exists, Spring creates a savepoint and rolls back to it in case of an error.  
+   9.3 transactional provides two important attributes rollbackFor and noRollbackFor. For example: roll back for all subclasses of `Exception` except `EntityNotFoundException`.  
+```
+   @transactional
+      (rollbackFor = Exception.class, noRollbackFor = EntityNotFoundException.class)
+   public void update (Long id, String name){
+      Author author = authorRepository.findbyId(id).orElse(null);
+      author.setName(name);
+   }
+```   
+Default the transaction rollback only for `RuntimeException`, If you want to roll back for all exceptions, use `Throwable.class` in rollbackFor.  
+&emsp; 9.4 Use `readOnly = true` for select queries to improve performance.  
+10. Flyway: To use Flyway, add the following dependencies `org.flywaydb:flyway-core:11.20.0` and `org.flywaydb:flyway-mysql:11.20.0`, Flyway configurations are defined in application.yml, and migration scripts are placed under the resources directory. Once a migration version is applied, 
+Flyway does not allow modifying or rolling back the content of an existing migration file.
+
 ## Day 3: Kafka Integration
 ### Tasks:
 1. Kafka producer in order service.

@@ -1,0 +1,33 @@
+# MySQL Configuration
+spring:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # true: When the database already has a table, it will insert a record into the history to mark the old table's state, then run v1.sql.
+    # false: It will run when the database has no tables.
+    # If you set false the first time for the old database, there will be an exception indicating that the schema is not empty but the history is empty.
+    # old database: Set true the first time to write the state record for the old table, false the second time to check the history for versioning.
+    # new database: Set false to recreate it, and always delete old tables if testing the environment.
+    baseline-on-migrate: false
+  datasource:
+    url: jdbc:mysql://localhost:3306/order_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: 12345
+    driverClassName: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+# create: drop all tables in the schema and recreate them from entities (test env)
+# create-drop: create tables on application start and drop them on shutdown (test env)
+# update: synchronize entities with database schema (test env, not recommended for prod)
+# validate: validate that schema matches entities; app fails on mismatch (staging, prod)
+# none: no schema management by Hibernate (production)
+    hibernate:
+      ddl-auto: validate
+
+logging:
+  level:
+    root: INFO
+    org:
+      flywaydb.core: INFO
+      springframework: ERROR
